@@ -42,8 +42,13 @@ export default function Cases() {
       lead_lawyer_id: values.lead_lawyer_id,
       accept_date: values.accept_date ? values.accept_date.format('YYYY-MM-DD') : undefined,
       summary: values.summary,
+      opponent_name: values.opponent_name,
+      opponent_id_number: values.opponent_id_number,
     })
     message.success('案件创建成功')
+    if (!values.opponent_name || !values.opponent_id_number) {
+      message.info('对方当事人姓名/证件号缺失，分配律师时将跳过利益冲突预检')
+    }
     setOpen(false)
     form.resetFields()
     setPage(1)
@@ -87,6 +92,12 @@ export default function Cases() {
           </Form.Item>
           <Form.Item name="lead_lawyer_id" label="主办律师" rules={[{ required: true }]}>
             <Select options={userStore.lawyers.map((l) => ({ label: l.real_name || l.username, value: l.id }))} />
+          </Form.Item>
+          <Form.Item name="opponent_name" label="对方当事人姓名">
+            <Input placeholder="资料缺失可稍后补录，不影响创建" maxLength={100} />
+          </Form.Item>
+          <Form.Item name="opponent_id_number" label="对方证件号">
+            <Input placeholder="用于律师利益冲突预检" maxLength={50} />
           </Form.Item>
           <Form.Item name="accept_date" label="受理日期">
             <DatePicker style={{ width: '100%' }} />

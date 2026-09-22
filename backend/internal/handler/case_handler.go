@@ -79,7 +79,8 @@ func (h *CaseHandler) Create(c *gin.Context) {
 		Fail(c, http.StatusBadRequest, constants.CodeBadRequest, "Case create: invalid accept_date")
 		return
 	}
-	cs, err := h.svc.Create(req.ClientID, req.LeadLawyerID, req.Title, req.CaseType, req.Summary, acceptDate, req.CoLawyerIDs)
+	cs, err := h.svc.Create(req.ClientID, req.LeadLawyerID, req.Title, req.CaseType, req.Summary,
+		req.OpponentName, req.OpponentIDNumber, acceptDate, req.CoLawyerIDs)
 	if err != nil {
 		h.wrapError(c, err, "Case[title="+req.Title+"] create failed")
 		return
@@ -99,7 +100,7 @@ func (h *CaseHandler) Update(c *gin.Context) {
 		Fail(c, http.StatusBadRequest, constants.CodeBadRequest, "Case[id="+strconv.FormatUint(id, 10)+"] update: "+err.Error())
 		return
 	}
-	cs, err := h.svc.Update(id, req.Title, req.Summary, req.CoLawyerIDs)
+	cs, err := h.svc.Update(id, req.Title, req.Summary, req.OpponentName, req.OpponentIDNumber, req.CoLawyerIDs)
 	if err != nil {
 		h.wrapError(c, err, "Case update failed")
 		return
@@ -139,12 +140,12 @@ func (h *CaseHandler) Assign(c *gin.Context) {
 		Fail(c, http.StatusBadRequest, constants.CodeBadRequest, "Case[id="+strconv.FormatUint(id, 10)+"] assign: "+err.Error())
 		return
 	}
-	cs, err := h.svc.Assign(id, req.LeadLawyerID, req.CoLawyerIDs)
+	cs, warning, err := h.svc.Assign(id, req.LeadLawyerID, req.CoLawyerIDs)
 	if err != nil {
-		h.wrapError(c, err, "Case assign failed")
+		h.wrapAssignError(c, err, "Case assign failed")
 		return
 	}
-	OK(c, cs)
+	OK(c, dto.CaseAssignResponse{Case: cs, Warning: warning})
 }
 
 func (h *CaseHandler) wrapError(c *gin.Context, err error, ctx string) {
@@ -157,6 +158,32 @@ func (h *CaseHandler) wrapError(c *gin.Context, err error, ctx string) {
 	}
 	h.logger.Error("case handler error", "context", ctx, "error", err.Error())
 	Fail(c, http.StatusInternalServerError, constants.CodeInternalError, constants.MsgInternalError)
+}
+
+// wrapAssignError 分配接口错误处理：利益冲突需额外透出结构化冲突原因与案号。
+func (h *CaseHandler) wrapAssignError(c *gin.Context, err error, ctx string) {
+	if conflictErr, ok := service.IsLawyerConflictError(err); ok {
+		c.Set("audit_detail", conflictErr.Message)
+		h.logger.Warn("case handler error", "context", ctx, "error", conflictErr.Error())
+		infos := make([]dto.LawyerConflictInfo, 0, len(conflictErr.Conflicts))
+		for _, cf := range conflictErr.Conflicts {
+			infos = append(infos, dto.LawyerConflictInfo{
+				LawyerID:         cf.LawyerID,
+				LawyerName:       cf.LawyerName,
+				ClientName:       cf.ClientName,
+				OpponentName:     cf.OpponentName,
+				OpponentIDNumber: cf.OpponentIDNumber,
+				ConflictCaseNo:   cf.ConflictCaseNos,
+			})
+		}
+		c.AbortWithStatusJSON(http.StatusConflict, gin.H{
+			"code":    constants.CodeLawyerConflict,
+			"message": conflictErr.Message,
+			"data":    dto.CaseAssignConflictData{Reason: constants.MsgLawyerConflict, Conflicts: infos},
+		})
+		return
+	}
+	h.wrapError(c, err, ctx)
 }
 
 func valueOrEmpty(s *string) string {

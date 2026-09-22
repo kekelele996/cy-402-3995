@@ -17,6 +17,8 @@ const (
 	LogCaseStatusChangeFailed  = "case status change failed"
 	LogCaseAssignSuccess       = "case assign success"
 	LogCaseAssignFailed        = "case assign failed"
+	LogCaseAssignConflict      = "case assign rejected: lawyer conflict of interest"
+	LogCaseAssignCheckSkipped  = "case assign conflict check skipped: opponent info missing"
 	LogDocumentUploadSuccess   = "document upload success"
 	LogDocumentUploadFailed    = "document upload failed"
 	LogDocumentDeleteSuccess   = "document delete success"

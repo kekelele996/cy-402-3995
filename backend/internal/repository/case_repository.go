@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"cylawcase/internal/constants"
 	"cylawcase/internal/model"
 
 	"gorm.io/gorm"
@@ -83,6 +84,20 @@ func (r *CaseRepository) ListByLawyer(lawyerID uint64) ([]model.Case, error) {
 	var list []model.Case
 	if err := r.db.Where("lead_lawyer_id = ?", lawyerID).Order("id DESC").Find(&list).Error; err != nil {
 		return nil, fmt.Errorf("list cases by lawyer: %w", err)
+	}
+	return list, nil
+}
+
+// ListOpenByClientIDNumber 按我方客户证件号查询未结案件（closed/archived 视为已结），可排除指定案件。
+func (r *CaseRepository) ListOpenByClientIDNumber(idNumber string, excludeCaseID uint64) ([]model.Case, error) {
+	var list []model.Case
+	if err := r.db.Joins("JOIN clients ON clients.id = cases.client_id").
+		Where("clients.id_number = ?", idNumber).
+		Where("cases.status NOT IN ?", []string{constants.CaseStatusClosed, constants.CaseStatusArchived}).
+		Where("cases.id <> ?", excludeCaseID).
+		Order("cases.id DESC").
+		Find(&list).Error; err != nil {
+		return nil, fmt.Errorf("list open cases by client id number: %w", err)
 	}
 	return list, nil
 }

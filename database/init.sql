@@ -34,10 +34,16 @@ CREATE TABLE IF NOT EXISTS cases (
   close_date TIMESTAMPTZ,
   summary TEXT,
   client_id BIGINT NOT NULL,
+  opponent_name VARCHAR(100) NOT NULL DEFAULT '',
+  opponent_id_number VARCHAR(50) NOT NULL DEFAULT '',
   lead_lawyer_id BIGINT NOT NULL,
   co_lawyer_ids JSONB NOT NULL DEFAULT '[]',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- 兼容旧库：补齐对方当事人信息列（幂等）
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS opponent_name VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS opponent_id_number VARCHAR(50) NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_cases_opponent_id_number ON cases (opponent_id_number);
 ALTER TABLE cases ADD CONSTRAINT uni_cases_case_no UNIQUE (case_no);
 
 CREATE TABLE IF NOT EXISTS documents (
@@ -84,12 +90,14 @@ INSERT INTO users (id, username, password_hash, real_name, role, license_no, ema
 
 INSERT INTO clients (id, name, id_number, contact, address, remark, created_at) VALUES
 (1, '深圳华信科技有限公司', '91440300MA5XXXXX1', '王经理 13900000001', '深圳市南山区科技园', '重点客户', NOW()),
-(2, '陈晓明', '440300199001011234', '陈先生 13900000002', '深圳市福田区', '', NOW());
+(2, '陈晓明', '440300199001011234', '陈先生 13900000002', '深圳市福田区', '', NOW()),
+(3, '周丽华', '440300198505056789', '周女士 13900000003', '深圳市罗湖区', '潜在对方当事人', NOW());
 
-INSERT INTO cases (id, case_no, title, case_type, status, accept_date, close_date, summary, client_id, lead_lawyer_id, co_lawyer_ids, created_at) VALUES
-(1, 'CY20260001', '华信科技买卖合同纠纷', 'commercial', 'investigating', NOW() - INTERVAL '15 days', NULL, '货款催收与合同违约赔偿。', 1, 2, '[3]', NOW()),
-(2, 'CY20260002', '陈晓明民间借贷纠纷', 'civil', 'filed', NOW() - INTERVAL '6 days', NULL, '借款 50 万元及利息追偿。', 2, 2, '[]', NOW()),
-(3, 'CY20260003', '劳动争议仲裁案（已结）', 'labor', 'closed', NOW() - INTERVAL '107 days', NOW() - INTERVAL '27 days', '劳动仲裁已裁决结案。', 2, 2, '[]', NOW());
+INSERT INTO cases (id, case_no, title, case_type, status, accept_date, close_date, summary, client_id, opponent_name, opponent_id_number, lead_lawyer_id, co_lawyer_ids, created_at) VALUES
+(1, 'CY20260001', '华信科技买卖合同纠纷', 'commercial', 'investigating', NOW() - INTERVAL '15 days', NULL, '货款催收与合同违约赔偿。', 1, '深圳市远达贸易有限公司', '91440300MA5YYYYY2', 2, '[3]', NOW()),
+(2, 'CY20260002', '陈晓明民间借贷纠纷', 'civil', 'filed', NOW() - INTERVAL '6 days', NULL, '借款 50 万元及利息追偿。', 2, '周丽华', '440300198505056789', 2, '[]', NOW()),
+(3, 'CY20260003', '劳动争议仲裁案（已结）', 'labor', 'closed', NOW() - INTERVAL '107 days', NOW() - INTERVAL '27 days', '劳动仲裁已裁决结案。', 2, '周丽华', '440300198505056789', 2, '[]', NOW()),
+(4, 'CY20260004', '周丽华房屋买卖合同纠纷', 'civil', 'hearing', NOW() - INTERVAL '3 days', NULL, '房屋买卖合同履行争议。', 3, '陈晓明', '440300199001011234', 2, '[]', NOW());
 
 INSERT INTO documents (id, title, file_type, file_url, upload_time, case_id, uploader_id, created_at) VALUES
 (1, '民事起诉状', 'complaint', '/uploads/case1_complaint.pdf', NOW(), 1, 2, NOW()),

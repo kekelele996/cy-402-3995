@@ -30,9 +30,30 @@ export interface CaseItem {
   close_date: string | null
   summary: string
   client_id: number
+  opponent_name: string
+  opponent_id_number: string
   lead_lawyer_id: number
   co_lawyer_ids: number[]
   created_at: string
+}
+
+export interface LawyerConflictInfo {
+  lawyer_id: number
+  lawyer_name: string
+  client_name: string
+  opponent_name: string
+  opponent_id_number: string
+  conflict_case_nos: string[]
+}
+
+export interface CaseAssignConflictData {
+  reason: string
+  conflicts: LawyerConflictInfo[]
+}
+
+export interface CaseAssignResult {
+  case: CaseItem
+  warning?: string
 }
 
 export interface DocumentItem {
