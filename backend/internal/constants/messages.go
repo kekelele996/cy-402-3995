@@ -13,6 +13,8 @@ const (
 	MsgInvalidCredentials    = "用户名或密码错误"
 	MsgCaseStatusConflict    = "案件状态流转冲突"
 	MsgBillingStatusConflict = "账单状态流转冲突"
+	MsgLawyerConflict        = "律师利益冲突，分配已拒绝"
+	MsgOpponentIDMissing     = "对方当事人证件号缺失，未执行利益冲突预检"
 	MsgUploadTooLarge        = "上传文件过大"
 	MsgUnsupportedFileType   = "不支持的文件类型"
 	MsgLoginSuccess          = "登录成功"

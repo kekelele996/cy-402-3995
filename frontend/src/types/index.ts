@@ -32,7 +32,36 @@ export interface CaseItem {
   client_id: number
   lead_lawyer_id: number
   co_lawyer_ids: number[]
+  opponent_name: string
+  opponent_id_number: string
   created_at: string
+}
+
+// 一条律师利益冲突记录。
+export interface ConflictCase {
+  lawyer_id: number
+  lawyer_name: string
+  case_id: number
+  case_no: string
+  case_title: string
+  opponent_name: string
+  opponent_id_number: string
+}
+
+// 利益冲突预检结果。
+export interface ConflictCheck {
+  has_conflict: boolean
+  reason: string
+  cases: ConflictCase[]
+  checked: boolean
+  warning: string
+}
+
+// 案件写操作/详情响应：案件本体 + 冲突预检。
+export interface CaseResult {
+  case: CaseItem
+  conflicts: ConflictCheck | null
+  warning?: string
 }
 
 export interface DocumentItem {

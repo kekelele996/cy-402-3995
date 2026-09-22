@@ -43,8 +43,8 @@ func (s *SeedService) Seed() error {
 	raw, _ := json.Marshal([]uint64{3})
 	co := model.CoLawyerJSON(raw)
 	cases := []model.Case{
-		{CaseNo: "CY20260001", Title: "华信科技买卖合同纠纷", CaseType: constants.CaseTypeCommercial, Status: constants.CaseStatusInvestigating, ClientID: 1, LeadLawyerID: 2, CoLawyerIDs: co, Summary: "货款催收与合同违约赔偿。"},
-		{CaseNo: "CY20260002", Title: "陈晓明民间借贷纠纷", CaseType: constants.CaseTypeCivil, Status: constants.CaseStatusFiled, ClientID: 2, LeadLawyerID: 2, Summary: "借款 50 万元及利息追偿。"},
+		{CaseNo: "CY20260001", Title: "华信科技买卖合同纠纷", CaseType: constants.CaseTypeCommercial, Status: constants.CaseStatusInvestigating, ClientID: 1, LeadLawyerID: 2, CoLawyerIDs: co, Summary: "货款催收与合同违约赔偿。", OpponentName: "上海恒远贸易有限公司", OpponentIDNumber: "91310115MA1HYXXXX2"},
+		{CaseNo: "CY20260002", Title: "陈晓明民间借贷纠纷", CaseType: constants.CaseTypeCivil, Status: constants.CaseStatusFiled, ClientID: 2, LeadLawyerID: 2, Summary: "借款 50 万元及利息追偿。", OpponentName: "周立波", OpponentIDNumber: "440300198507073210"},
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		for i := range users {

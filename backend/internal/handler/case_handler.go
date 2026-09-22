@@ -52,22 +52,22 @@ func (h *CaseHandler) List(c *gin.Context) {
 	OK(c, pageResponse(list, total, q.Page, q.PageSize))
 }
 
-// Get 案件详情。
+// Get 案件详情（含对方当事人信息与冲突预检结果）。
 func (h *CaseHandler) Get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		Fail(c, http.StatusBadRequest, constants.CodeBadRequest, "Case[id] get: invalid id")
 		return
 	}
-	cs, err := h.svc.Get(id)
+	result, err := h.svc.Get(id)
 	if err != nil {
 		h.wrapError(c, err, "Case get failed")
 		return
 	}
-	OK(c, cs)
+	OK(c, result)
 }
 
-// Create 创建案件。
+// Create 创建案件（记录对方当事人并执行律师利益冲突预检）。
 func (h *CaseHandler) Create(c *gin.Context) {
 	var req dto.CaseCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -79,15 +79,20 @@ func (h *CaseHandler) Create(c *gin.Context) {
 		Fail(c, http.StatusBadRequest, constants.CodeBadRequest, "Case create: invalid accept_date")
 		return
 	}
-	cs, err := h.svc.Create(req.ClientID, req.LeadLawyerID, req.Title, req.CaseType, req.Summary, acceptDate, req.CoLawyerIDs)
+	result, err := h.svc.Create(req.ClientID, req.LeadLawyerID, req.Title, req.CaseType, req.Summary,
+		acceptDate, req.CoLawyerIDs, req.OpponentName, req.OpponentIDNumber)
 	if err != nil {
-		h.wrapError(c, err, "Case[title="+req.Title+"] create failed")
+		h.wrapError(c, err, "Case[title="+req.Title+"] create failed by role["+middleware.GetUserRole(c)+"]")
 		return
 	}
-	OKWithMessage(c, constants.MsgCaseCreated, cs)
+	if result.Warning != "" {
+		OKWithMessage(c, result.Warning, result)
+		return
+	}
+	OKWithMessage(c, constants.MsgCaseCreated, result)
 }
 
-// Update 更新案件。
+// Update 更新案件（可更新对方当事人信息，协作律师/证件号变更触发冲突预检）。
 func (h *CaseHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -99,12 +104,16 @@ func (h *CaseHandler) Update(c *gin.Context) {
 		Fail(c, http.StatusBadRequest, constants.CodeBadRequest, "Case[id="+strconv.FormatUint(id, 10)+"] update: "+err.Error())
 		return
 	}
-	cs, err := h.svc.Update(id, req.Title, req.Summary, req.CoLawyerIDs)
+	result, err := h.svc.Update(id, req.Title, req.Summary, req.CoLawyerIDs, req.OpponentName, req.OpponentIDNumber)
 	if err != nil {
-		h.wrapError(c, err, "Case update failed")
+		h.wrapError(c, err, "Case[id="+strconv.FormatUint(id, 10)+"] update failed by role["+middleware.GetUserRole(c)+"]")
 		return
 	}
-	OK(c, cs)
+	if result.Warning != "" {
+		OKWithMessage(c, result.Warning, result)
+		return
+	}
+	OK(c, result)
 }
 
 // ChangeStatus 状态流转。
@@ -127,7 +136,7 @@ func (h *CaseHandler) ChangeStatus(c *gin.Context) {
 	OK(c, cs)
 }
 
-// Assign 分配律师。
+// Assign 分配主办及协作律师（强制利益冲突预检，管理员也不能绕过）。
 func (h *CaseHandler) Assign(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -139,12 +148,16 @@ func (h *CaseHandler) Assign(c *gin.Context) {
 		Fail(c, http.StatusBadRequest, constants.CodeBadRequest, "Case[id="+strconv.FormatUint(id, 10)+"] assign: "+err.Error())
 		return
 	}
-	cs, err := h.svc.Assign(id, req.LeadLawyerID, req.CoLawyerIDs)
+	result, err := h.svc.Assign(id, req.LeadLawyerID, req.CoLawyerIDs)
 	if err != nil {
-		h.wrapError(c, err, "Case assign failed")
+		h.wrapError(c, err, "Case[id="+strconv.FormatUint(id, 10)+"] assign failed by role["+middleware.GetUserRole(c)+"]")
 		return
 	}
-	OK(c, cs)
+	if result.Warning != "" {
+		OKWithMessage(c, result.Warning, result)
+		return
+	}
+	OK(c, result)
 }
 
 func (h *CaseHandler) wrapError(c *gin.Context, err error, ctx string) {
@@ -152,7 +165,7 @@ func (h *CaseHandler) wrapError(c *gin.Context, err error, ctx string) {
 	if errors.As(err, &appErr) {
 		c.Set("audit_detail", appErr.Message)
 		h.logger.Warn("case handler error", "context", ctx, "error", appErr.Error())
-		Fail(c, appErrorStatus(appErr.Code), appErr.Code, appErr.Message)
+		FailWithData(c, appErrorStatus(appErr.Code), appErr.Code, appErr.Message, appErr.Detail)
 		return
 	}
 	h.logger.Error("case handler error", "context", ctx, "error", err.Error())

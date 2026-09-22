@@ -36,9 +36,15 @@ CREATE TABLE IF NOT EXISTS cases (
   client_id BIGINT NOT NULL,
   lead_lawyer_id BIGINT NOT NULL,
   co_lawyer_ids JSONB NOT NULL DEFAULT '[]',
+  opponent_name VARCHAR(100) NOT NULL DEFAULT '',
+  opponent_id_number VARCHAR(50) NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE cases ADD CONSTRAINT uni_cases_case_no UNIQUE (case_no);
+-- 兼容由旧版本初始化脚本创建的库：幂等补齐对方当事人列与索引
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS opponent_name VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS opponent_id_number VARCHAR(50) NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_cases_opponent_id_number ON cases (opponent_id_number);
 
 CREATE TABLE IF NOT EXISTS documents (
   id BIGSERIAL PRIMARY KEY,
@@ -86,10 +92,10 @@ INSERT INTO clients (id, name, id_number, contact, address, remark, created_at) 
 (1, '深圳华信科技有限公司', '91440300MA5XXXXX1', '王经理 13900000001', '深圳市南山区科技园', '重点客户', NOW()),
 (2, '陈晓明', '440300199001011234', '陈先生 13900000002', '深圳市福田区', '', NOW());
 
-INSERT INTO cases (id, case_no, title, case_type, status, accept_date, close_date, summary, client_id, lead_lawyer_id, co_lawyer_ids, created_at) VALUES
-(1, 'CY20260001', '华信科技买卖合同纠纷', 'commercial', 'investigating', NOW() - INTERVAL '15 days', NULL, '货款催收与合同违约赔偿。', 1, 2, '[3]', NOW()),
-(2, 'CY20260002', '陈晓明民间借贷纠纷', 'civil', 'filed', NOW() - INTERVAL '6 days', NULL, '借款 50 万元及利息追偿。', 2, 2, '[]', NOW()),
-(3, 'CY20260003', '劳动争议仲裁案（已结）', 'labor', 'closed', NOW() - INTERVAL '107 days', NOW() - INTERVAL '27 days', '劳动仲裁已裁决结案。', 2, 2, '[]', NOW());
+INSERT INTO cases (id, case_no, title, case_type, status, accept_date, close_date, summary, client_id, lead_lawyer_id, co_lawyer_ids, opponent_name, opponent_id_number, created_at) VALUES
+(1, 'CY20260001', '华信科技买卖合同纠纷', 'commercial', 'investigating', NOW() - INTERVAL '15 days', NULL, '货款催收与合同违约赔偿。', 1, 2, '[3]', '上海恒远贸易有限公司', '91310115MA1HYXXXX2', NOW()),
+(2, 'CY20260002', '陈晓明民间借贷纠纷', 'civil', 'filed', NOW() - INTERVAL '6 days', NULL, '借款 50 万元及利息追偿。', 2, 2, '[]', '周立波', '440300198507073210', NOW()),
+(3, 'CY20260003', '劳动争议仲裁案（已结）', 'labor', 'closed', NOW() - INTERVAL '107 days', NOW() - INTERVAL '27 days', '劳动仲裁已裁决结案。', 2, 2, '[]', '深圳迅捷物流有限公司', '91440300MA5OLD9X33', NOW());
 
 INSERT INTO documents (id, title, file_type, file_url, upload_time, case_id, uploader_id, created_at) VALUES
 (1, '民事起诉状', 'complaint', '/uploads/case1_complaint.pdf', NOW(), 1, 2, NOW()),

@@ -44,6 +44,17 @@ func IsValidCaseType(s string) bool {
 	return false
 }
 
+// IsOpenCaseStatus 判断案件是否处于未结状态（closed/archived 之外均为未结）。
+// 律师利益冲突预检只排查未结案件。
+func IsOpenCaseStatus(s string) bool {
+	return s != CaseStatusClosed && s != CaseStatusArchived
+}
+
+// IsOpenCaseStatusValue 校验并判断：状态合法且未结时返回 true。
+func IsOpenCaseStatusValue(s string) bool {
+	return IsValidCaseStatus(s) && IsOpenCaseStatus(s)
+}
+
 // UserRole 用户角色枚举。
 const (
 	RoleAdmin     = "admin"

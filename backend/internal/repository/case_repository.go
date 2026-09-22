@@ -87,6 +87,22 @@ func (r *CaseRepository) ListByLawyer(lawyerID uint64) ([]model.Case, error) {
 	return list, nil
 }
 
+// ListOpenByOpponentIDNumber 按对方当事人证件号查询所有未结案件，可通过 excludeID 排除当前案件本身。
+// 未结状态 = filed / investigating / hearing（closed、archived 不参与利益冲突预检）。
+func (r *CaseRepository) ListOpenByOpponentIDNumber(idNumber string, excludeID uint64) ([]model.Case, error) {
+	var list []model.Case
+	q := r.db.Model(&model.Case{}).
+		Where("opponent_id_number = ?", idNumber).
+		Where("status <> ? AND status <> ?", "closed", "archived")
+	if excludeID > 0 {
+		q = q.Where("id <> ?", excludeID)
+	}
+	if err := q.Order("id ASC").Find(&list).Error; err != nil {
+		return nil, fmt.Errorf("list open cases by opponent id number: %w", err)
+	}
+	return list, nil
+}
+
 // Update 更新案件。
 func (r *CaseRepository) Update(c *model.Case) error {
 	if err := r.db.Save(c).Error; err != nil {

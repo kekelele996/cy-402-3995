@@ -23,6 +23,15 @@ func Fail(c *gin.Context, status int, code int, message string) {
 	c.AbortWithStatusJSON(status, gin.H{"code": code, "message": message, "data": nil})
 }
 
+// FailWithData 输出带结构化明细的错误响应（如律师利益冲突的冲突案号列表）。
+func FailWithData(c *gin.Context, status int, code int, message string, data any) {
+	if data == nil {
+		Fail(c, status, code, message)
+		return
+	}
+	c.AbortWithStatusJSON(status, gin.H{"code": code, "message": message, "data": data})
+}
+
 // pageResponse 分页响应结构。
 func pageResponse(list any, total int64, page, pageSize int) gin.H {
 	return gin.H{"list": list, "total": total, "page": page, "page_size": pageSize}
@@ -37,7 +46,7 @@ func appErrorStatus(code int) int {
 		return http.StatusForbidden
 	case constants.CodeNotFound:
 		return http.StatusNotFound
-	case constants.CodeConflict, constants.CodeCaseStatusConflict, constants.CodeBillingStatusConflict:
+	case constants.CodeConflict, constants.CodeCaseStatusConflict, constants.CodeBillingStatusConflict, constants.CodeLawyerConflict:
 		return http.StatusConflict
 	case constants.CodeValidationFailed:
 		return http.StatusUnprocessableEntity
